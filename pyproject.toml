@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "css-matrix-completion"
+version = "0.1.0"
+description = ""
+authors = ["antoninak <antonina.krajewska@nask.pl>"]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+numpy = "^1.22.3"
+scipy = "^1.8.0"
+jupyter = "^1.0.0"
+runipy = "^0.1.5"
+ipython = "^8.2.0"
+ipykernel = "^6.13.0"
+pandas = "^1.4.2"
+cvxpy = "^1.2.0"
+Mosek = "^9.3.20"
+cvxopt = "^1.3.0"
+seaborn = "^0.11.2"
+fancyimpute = "^0.7.0"
+cur = "^0.0.2"
+pyuoi = "^1.1.1"
+importlib-resources = "^5.9.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
