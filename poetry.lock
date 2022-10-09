@@ -585,6 +585,14 @@ numpy = ">=1.10"
 six = "*"
 
 [[package]]
+name = "llvmlite"
+version = "0.39.1"
+description = "lightweight wrapper around basic LLVM functionality"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "markupsafe"
 version = "2.1.1"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -757,6 +765,18 @@ traitlets = ">=4.2.1"
 docs = ["sphinx", "nbsphinx", "sphinxcontrib-github-alt", "sphinx-rtd-theme", "myst-parser"]
 json-logging = ["json-logging"]
 test = ["pytest", "coverage", "requests", "testpath", "nbval", "selenium", "pytest-cov", "requests-unixsocket"]
+
+[[package]]
+name = "numba"
+version = "0.56.2"
+description = "compiling Python code using LLVM"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+llvmlite = ">=0.39.0dev0,<0.40"
+numpy = ">=1.18,<1.24"
 
 [[package]]
 name = "numpy"
@@ -1351,7 +1371,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.11"
-content-hash = "2a17eeea342184253c036c8067ab513e932b037e561f96e35a296591883e43bc"
+content-hash = "5780d6710176ccb5ab71495a19af722cbaa291dfaf6d7c0e7460876694bd41f8"
 
 [metadata.files]
 appnope = []
@@ -1398,6 +1418,7 @@ jupyterlab-pygments = []
 jupyterlab-widgets = []
 kiwisolver = []
 knnimpute = []
+llvmlite = []
 markupsafe = []
 matplotlib = []
 matplotlib-inline = []
@@ -1409,6 +1430,7 @@ nbformat = []
 nest-asyncio = []
 nose = []
 notebook = []
+numba = []
 numpy = []
 osqp = []
 packaging = []

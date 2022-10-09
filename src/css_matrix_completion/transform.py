@@ -1,7 +1,8 @@
 import numpy as np
 from fancyimpute import KNN, IterativeImputer, IterativeSVD
 import scipy
-
+import cvxpy as cp
+import numba
 
 def svt(X, t=None):
     U, S, VT = np.linalg.svd(X)
@@ -54,14 +55,33 @@ def iterative_svd(X, ok_mask, r=10):
     return solver.fit_transform(X, missing_mask)
 
 
-def ls(X, ok_mask):
-    diag = ok_mask.T.flatten()
-    # return np.diag(diag)
-    A = np.diagflat(diag)
-    b = np.multiply(ok_mask, X).T.flatten()
-    b[np.argwhere(np.isnan(b))] = 0
-    x, *_ = scipy.linalg.lstsq(A, b, lapack_driver='gelsy', check_finite=False)
-    return x.reshape((X.shape[1], X.shape[0])).T
+# def ls(X, ok_mask):
+#     diag = ok_mask.T.flatten()
+#     # return np.diag(diag)
+#     A = np.diagflat(diag)
+#     b = np.multiply(ok_mask, X).T.flatten()
+#     b[np.argwhere(np.isnan(b))] = 0
+#     x, *_ = scipy.linalg.lstsq(A, b, lapack_driver='gelsy', check_finite=False)
+#     return x.reshape((X.shape[1], X.shape[0])).T
+
+# def ls_column(Y, ok_mask, ):
+#     si = ok_mask[:, i]
+#     sia = X[si, i]
+#     siX = C[si]
+#     # Y[i, :] = np.linalg.lstsq(siX, sia)[0]
+#     Y[i, :] = scipy.linalg.lstsq(siX, sia, lapack_driver='gelsy', check_finite=False)[0]
+
+@numba.njit
+def ls_vec(siX, sia):
+    return np.linalg.lstsq(siX, sia)[0]
+
+@numba.njit(parallel=True)
+def _cx(X, ok_mask, C, Y, n):
+    for i in numba.prange(n):
+        si = ok_mask[:, i]
+        sia = X[si, i]
+        siX = C[si]
+        Y[i, :] = np.linalg.lstsq(siX, sia)[0]
 
 
 def cx(X, ok_mask, C):
@@ -72,29 +92,38 @@ def cx(X, ok_mask, C):
     # only over the nonzero projection entries. Note that the
     # projection changes the least-squares matrix siX so we
     # cannot vectorize the outer loop.
-    ok_mask = ok_mask.astype(bool)
-    for i in range(n):
-        si = ok_mask[:, i]
-        sia = X[si, i]
-        siX = C[si]
-        Y[i, :] = np.linalg.lstsq(siX, sia)[0]
-    return C @ Y.T
-    # YT = np.multiply(ok_mask, X)@C
-    # return YT.T
+    _cx(X, ok_mask, C, Y, n)
+    return C@Y.T
+
+# @numba.jit
+# def cx(X, ok_mask, C):
+#     m, n = X.shape
+#     _, k = C.shape
+#     Y = np.zeros((n, k))
+#     # For each row, solve a k-dimensional regression problem
+#     # only over the nonzero projection entries. Note that the
+#     # projection changes the least-squares matrix siX so we
+#     # cannot vectorize the outer loop.
+#     ok_mask = ok_mask.astype(bool)
+#     for i in range(n):
+#         si = ok_mask[:, i]
+#         sia = X[si, i]
+#         siX = C[si]
+#         Y[i, :] = np.linalg.lstsq(siX, sia)[0]
+#         #Y[i, :] = scipy.linalg.lstsq(siX, sia, lapack_driver='gelsy', check_finite=False)[0]
+#     return C @ Y.T
+#     # YT = np.multiply(ok_mask, X)@C
+#     # return YT.T
 
 
-def update_right(A, S, X):
+def ls(X, ok_mask, C):
     """Update right factor for matrix completion objective."""
-    m, n = A.shape
-    _, k = X.shape
-    Y = np.zeros((n, k))
-    # For each row, solve a k-dimensional regression problem
-    # only over the nonzero projection entries. Note that the
-    # projection changes the least-squares matrix siX so we
-    # cannot vectorize the outer loop.
-    for i in range(n):
-        si = S[:, i]
-        sia = A[si, i]
-        siX = X[si]
-        Y[i, :] = np.linalg.lstsq(siX, sia)[0]
-    return Y
+    m, n = X.shape
+    _, k = C.shape
+    Y = cp.Variable((k, n))
+    X[~ok_mask] = 0
+    #obj = cp.norm(cp.multiply(ok_mask, X) - cp.multiply(ok_mask,C @ Y))
+    obj = cp.sum_squares(cp.multiply(ok_mask, X) - cp.multiply(ok_mask, C @ Y))
+    prob = cp.Problem(cp.Minimize(obj))
+    prob.solve(solver=cp.SCS, use_indirect=False)
+    return C @ Y.value

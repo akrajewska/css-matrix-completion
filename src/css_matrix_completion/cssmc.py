@@ -4,7 +4,7 @@ import cvxpy as cp
 from typing import Callable
 
 from src.css_matrix_completion.css import leverage_select
-from src.css_matrix_completion.transform import knn, cx
+from src.css_matrix_completion.transform import knn, cx, ls
 
 
 class CSSMC:
@@ -18,19 +18,22 @@ class CSSMC:
         self.fill_method = fill_method
 
     def fit_transform(self, X, X_correct: np.ndarray = None):
-        X_org = np.copy(X)
-        missing_mask = np.isnan(X_org)
+        X_tmp = np.copy(X)
+        missing_mask = np.isnan(X)
         ok_mask = ~missing_mask
-        self.prepare(X, missing_mask)
+        self.prepare(X_tmp, missing_mask)
         if X_correct is not None:
             cols_indices = self.col_select(X_correct, missing_mask=missing_mask, c=self.col_number)
         else:
-            cols_indices = self.col_select(X, missing_mask=missing_mask, c=self.col_number)
-        C_incomplete = X[:, cols_indices]
+            cols_indices = self.col_select(X_tmp, missing_mask=missing_mask, c=self.col_number)
+        C_incomplete = X_tmp[:, cols_indices]
         cols_missing = missing_mask[:, cols_indices]
         cols_ok = ~cols_missing
         C_filled = self.solve(C_incomplete, cols_ok)
-        X_filled = self.transform(X_org, C_filled, cols_indices, ok_mask)
+        if X_correct is not None:
+            print(f"kurwa {np.linalg.norm(C_filled-X_correct[:, cols_indices])/np.linalg.norm(X_correct[:, cols_indices])}")
+        X_filled = self.transform(X, C_filled, cols_indices, ok_mask)
+        #TODO indeksy kolumn sa do debugowania
         return X_filled, cols_indices
 
     def solve(self, C_incomplete, cols_ok):
@@ -47,8 +50,9 @@ class CSSMC:
             X_filled[:, ci] = C_filled[:, i]
         X_filled[ok_mask] = X_org[ok_mask]
         missing_mask = np.isnan(X_filled)
-        if self._transform == cx:
-            return self._transform(X_filled, ~missing_mask, C_filled)
+        if self._transform == cx or self._transform == ls:
+            ok_mask = ~missing_mask.astype(bool)
+            return self._transform(X_filled, ok_mask, C_filled)
         return self._transform(X_filled, ~missing_mask)
 
     def _fill_columns_with_fn(self, X, missing_mask, col_fn):

@@ -21,6 +21,7 @@ fancyimpute = "^0.7.0"
 cur = "^0.0.2"
 pyuoi = "^1.1.1"
 importlib-resources = "^5.9.0"
+numba = "^0.56.2"
 
 [tool.poetry.dev-dependencies]
 

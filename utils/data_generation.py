@@ -8,7 +8,7 @@ def create_rank_k_dataset(
         n_rows=5,
         n_cols=5,
         k=3,
-        fraction_missing=0.8,
+        fraction_missing=0.7,
         symmetric=False,
         random_seed=0,
         gaussian=False,
@@ -40,7 +40,9 @@ def create_rank_k_dataset(
     for idx in omega:
         XY_incomplete[idx[0], idx[1]] += XY[idx[0], idx[1]]
         mask_array[idx[0], idx[1]] = 1
-
+    mask_array = mask_array.astype(bool)
+    missing_mask = ~mask_array
+    XY_incomplete[missing_mask] = np.nan
     return XY, XY_incomplete, omega, mask_array
 
 
