@@ -47,13 +47,13 @@ for trial in range(1):
                 M_filled, cols_idx = solver.fit_transform(M_incomplete)
                 elapsed_time = time.perf_counter() - start_time
                 errors = get_errors(M_filled, M, ~mask_array)
-                log_data = base_log_data + errors + [elapsed_time]
+                log_data = base_log_data + [n_selected_cols, elapsed_time] + errors
                 log(log_data)
 
             start_time = time.perf_counter()
             M_filled = nn_complete(M_incomplete)
             errors = get_errors(M_filled, M, ~mask_array)
-            log_data = base_log_data + errors + [elapsed_time]
+            log_data = base_log_data + [n_cols, elapsed_time] + errors
             log(log_data)
 
     print('Finished benchmark')
