@@ -69,8 +69,8 @@ def remove_pixels(
 
 def remove_pixels_uniformly(
         X: np.ndarray,
-        missing_part: float = 0.6,
-        random_seed=0):
+        missing_part: float = 0.9,
+        random_seed=0) -> np.ndarray:
     X_missing = np.copy(X).astype('float32')
     index_nan = np.random.choice(X.size, int(missing_part * X.size), replace=False)
     X_missing.ravel()[index_nan] = np.nan

@@ -39,7 +39,7 @@ for trial in range(1):
             M, M_incomplete, omega, mask_array = create_rank_k_dataset(n_rows=n_rows, n_cols=n_cols, k=rank,
                                                                        gaussian=True,
                                                                        noise=noise)
-            base_log_data = [trial, n_rows, n_cols, rank]
+            base_log_data = [trial, n_rows, n_cols, rank, noise]
             for c_rate in [0.2, 0.5, 0.7]:
                 n_selected_cols = int(c_rate * n_cols)
                 solver = CSSMC(col_number=n_selected_cols, transform=cx, col_select=uniform, fill_method='zero')

@@ -75,7 +75,7 @@ def iterative_svd(X, ok_mask, r=10):
 def ls_vec(siX, sia):
     return np.linalg.lstsq(siX, sia)[0]
 
-@numba.njit(parallel=True)
+# @numba.njit(parallel=True)
 def _cx(X, ok_mask, C, Y, n):
     for i in numba.prange(n):
         si = ok_mask[:, i]
