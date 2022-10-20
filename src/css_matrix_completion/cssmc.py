@@ -5,17 +5,19 @@ from typing import Callable
 
 from src.css_matrix_completion.css import leverage_select
 from src.css_matrix_completion.transform import knn, cx, ls
+from src.css_matrix_completion.mc import nn_complete
 
 
 class CSSMC:
 
     def __init__(self, col_number: int, col_select: Callable = leverage_select, transform: Callable = knn,
-                 threshold: float = 0, fill_method='zero'):
+                 solve: Callable = nn_complete, threshold: float = 0, fill_method='zero'):
         self.col_number = col_number
         self.col_select = col_select
         self._transform = transform
         self.threshold = threshold
         self.fill_method = fill_method
+        self.solve = solve
 
     def fit_transform(self, X, X_correct: np.ndarray = None):
         X_tmp = np.copy(X)
@@ -28,21 +30,20 @@ class CSSMC:
             cols_indices = self.col_select(X_tmp, missing_mask=missing_mask, c=self.col_number)
         C_incomplete = X_tmp[:, cols_indices]
         cols_missing = missing_mask[:, cols_indices]
-        cols_ok = ~cols_missing
-        C_filled = self.solve(C_incomplete, cols_ok)
+        C_filled = self.solve(C_incomplete, cols_missing)
         if X_correct is not None:
             print(f"kurwa {np.linalg.norm(C_filled-X_correct[:, cols_indices])/np.linalg.norm(X_correct[:, cols_indices])}")
         X_filled = self.transform(X, C_filled, cols_indices, ok_mask)
         #TODO indeksy kolumn sa do debugowania
         return X_filled, cols_indices
 
-    def solve(self, C_incomplete, cols_ok):
-        C = cp.Variable(C_incomplete.shape)
-        prob = cp.Problem(cp.Minimize(cp.norm(C, p='nuc')),
-                          [cp.multiply(cols_ok, C) == cp.multiply(cols_ok,C_incomplete)])
-
-        prob.solve(solver=cp.SCS, verbose=False)
-        return C.value
+    # def solve(self, C_incomplete, cols_ok):
+    #     C = cp.Variable(C_incomplete.shape)
+    #     prob = cp.Problem(cp.Minimize(cp.norm(C, p='nuc')),
+    #                       [cp.multiply(cols_ok, C) == cp.multiply(cols_ok,C_incomplete)])
+    #
+    #     prob.solve(solver=cp.SCS, verbose=False, use_indirect=True)
+    #     return C.value
 
     def transform(self, X_org, C_filled, cols_indices, ok_mask):
         X_filled = np.copy(X_org)

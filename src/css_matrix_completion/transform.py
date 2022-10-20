@@ -4,25 +4,25 @@ import scipy
 import cvxpy as cp
 import numba
 
-def svt(X, t=None):
-    U, S, VT = np.linalg.svd(X)
-    if t is None:
-        t = np.max(S) - 50
-    Sigma = np.zeros(X.shape)
-    S = [max(s - t, 0) for s in S]
-    np.fill_diagonal(Sigma, S)
-    return U @ Sigma @ VT
+# def svt(X, t=None):
+#     U, S, VT = np.linalg.svd(X)
+#     if t is None:
+#         t = np.max(S) - 50
+#     Sigma = np.zeros(X.shape)
+#     S = [max(s - t, 0) for s in S]
+#     np.fill_diagonal(Sigma, S)
+#     return U @ Sigma @ VT
 
 
-def grid_svt(X, ok_mask, k=5):
-    U, S, VT = np.linalg.svd(X)
-    t_max = np.max(S)
-    t_min = 0
-    X_t = X
-    for t in np.linspace(t_max, t_min, num=k):
-        X_t = svt(X_t, t)
-        X_t[ok_mask] = X[ok_mask]
-    return X_t
+# def grid_svt(X, ok_mask, k=5):
+#     U, S, VT = np.linalg.svd(X)
+#     t_max = np.max(S)
+#     t_min = 0
+#     X_t = X
+#     for t in np.linspace(t_max, t_min, num=k):
+#         X_t = svt(X_t, t)
+#         X_t[ok_mask] = X[ok_mask]
+#     return X_t
 
 
 def knn(X, ok_mask):
@@ -75,7 +75,7 @@ def iterative_svd(X, ok_mask, r=10):
 def ls_vec(siX, sia):
     return np.linalg.lstsq(siX, sia)[0]
 
-# @numba.njit(parallel=True)
+# @numba.jit(parallel=True)
 def _cx(X, ok_mask, C, Y, n):
     for i in numba.prange(n):
         si = ok_mask[:, i]
