@@ -5,14 +5,15 @@ sys.path.append("/home/antonina/DR/css-matrix-completion/")
 
 from src.css_matrix_completion.css import uniform
 from src.css_matrix_completion.cssmc import CSSMC
-from src.css_matrix_completion.mc import nn_complete
+from src.css_matrix_completion.mc.soft_impute import SoftImpute
+from src.cv.cross_validation import best_lambda
 from src.css_matrix_completion.transform import cx
 from utils.data_generation import create_rank_k_dataset
 
 import numpy as np
 
-n_rows = 100
-n_cols = 500
+n_rows = 1000
+n_cols = 1000
 
 
 def get_errors(solution, output, missing_mask):
@@ -31,27 +32,30 @@ def log(output, file_name='output'):
         csv_writer.writerow(output)
 
 
-for trial in range(1):
+for trial in range(5):
     print(f'Starting trial {trial}')
-    for noise in [0, 0.2, 0.5]:
-        for rank in [5, 10, 15]:
+    for fraction_missing in [0.5, 0.7, 0.9]:
+        for rank in [5, 10]:
             print(f'Rank {rank}')
             M, M_incomplete, omega, mask_array = create_rank_k_dataset(n_rows=n_rows, n_cols=n_cols, k=rank,
                                                                        gaussian=True,
-                                                                       noise=noise)
-            base_log_data = [trial, n_rows, n_cols, rank, noise]
+                                                                       fraction_missing=fraction_missing)
+            base_log_data = [trial, n_rows, n_cols, rank, fraction_missing]
             for c_rate in [0.2, 0.5, 0.7]:
                 n_selected_cols = int(c_rate * n_cols)
-                solver = CSSMC(col_number=n_selected_cols, transform=cx, col_select=uniform, fill_method='zero')
+                solver = CSSMC(col_number=n_selected_cols, solver=SoftImpute, transform=cx, col_select=uniform, fill_method='zero', max_rank=rank)
+                solver.get_cols_matrix(M_incomplete, np.isnan(M_incomplete))
+                best_lambda_, M_filled_old = best_lambda(solver.C_incomplete)
                 start_time = time.perf_counter()
-                M_filled, cols_idx = solver.fit_transform(M_incomplete)
+                solver.lambda_ = best_lambda_
+                M_filled = solver.fit_transform(M_incomplete)
                 elapsed_time = time.perf_counter() - start_time
                 errors = get_errors(M_filled, M, ~mask_array)
                 log_data = base_log_data + [n_selected_cols, elapsed_time] + errors
                 log(log_data)
 
             start_time = time.perf_counter()
-            M_filled = nn_complete(M_incomplete)
+            # M_filled = nn_complete(M_incomplete)
             errors = get_errors(M_filled, M, ~mask_array)
             log_data = base_log_data + [n_cols, elapsed_time] + errors
             log(log_data)

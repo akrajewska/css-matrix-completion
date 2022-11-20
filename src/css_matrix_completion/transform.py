@@ -3,6 +3,7 @@ from fancyimpute import KNN, IterativeImputer, IterativeSVD
 import scipy
 import cvxpy as cp
 import numba
+import torch
 
 # def svt(X, t=None):
 #     U, S, VT = np.linalg.svd(X)
@@ -73,6 +74,7 @@ def iterative_svd(X, ok_mask, r=10):
 
 @numba.njit
 def ls_vec(siX, sia):
+
     return np.linalg.lstsq(siX, sia)[0]
 
 # @numba.jit(parallel=True)
@@ -81,7 +83,8 @@ def _cx(X, ok_mask, C, Y, n):
         si = ok_mask[:, i]
         sia = X[si, i]
         siX = C[si]
-        Y[i, :] = np.linalg.lstsq(siX, sia)[0]
+       # Y[i, :] = np.linalg.lstsq(siX, sia)[0]
+        Y[i, :] = scipy.linalg.lstsq(siX, sia, lapack_driver='gelsy')[0]
 
 
 def cx(X, ok_mask, C):
@@ -127,3 +130,43 @@ def ls(X, ok_mask, C):
     prob = cp.Problem(cp.Minimize(obj))
     prob.solve(solver=cp.SCS, use_indirect=False)
     return C @ Y.value
+
+
+def sgrad_ls(X, ok_mask, C):
+    m, n = X.shape
+    _, k = C.shape
+    max_iters = 10000
+    lr = 0.000001
+    print('hola')
+    Y = np.random.rand(k,n)
+    errors = []
+    omega_idx = np.argwhere(ok_mask)
+    for epoch in range(max_iters):
+        errors.append(np.linalg.norm(X - C @ Y))
+        np.random.shuffle(omega_idx)
+        for idx in omega_idx:
+            i, j = tuple(idx)
+            if np.isnan(X[i,j]):
+                print('kurwa')
+            #Y[:, j] = Y[:, j] - lr * (2 * (np.dot(C[i, :], C[i, :]) * Y[:, j]) - X[i, j]*C[i, :])
+            Y[:, j] =  Y[:, j] + lr * (X[i,j] - np.dot(C[i,:], Y[:, j]) * C[i, :])
+            if np.any(np.isnan(Y[:, j])):
+                print('jprd')
+                break
+
+        else:
+            continue
+
+
+        break
+
+    return Y, errors
+
+
+def _cx_torch(X, ok_mask, C, Y, n):
+    for i in range(n):
+        si = ok_mask[:, i]
+        sia = X[si, i]
+        siX = C[si]
+       # Y[i, :] = np.linalg.lstsq(siX, sia)[0]
+        Y[i, :] = torch.linalg.lstsq(siX, sia, lapack_driver='gelsy')[0]

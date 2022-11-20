@@ -26,10 +26,10 @@ def nn_complete(M_incomplete: np.ndarray, missing_mask: np.ndarray=None) -> np.n
 
 
 def svt(M_incomplete, missing_mask):
-    solver = SoftImputeWarmStarts(with_iteration_number=True)
+    solver = SoftImputeWarmStarts(with_iteration_number=False)
     M_incomplete[missing_mask] = np.nan
     ret = solver.fit_transform(M_incomplete)
-    _, M_filled, _ = ret[-1]
+    M_filled = ret
     return M_filled
 
 

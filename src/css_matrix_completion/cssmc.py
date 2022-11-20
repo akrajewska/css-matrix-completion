@@ -1,49 +1,56 @@
-import numpy as np
-import cvxpy as cp
-
 from typing import Callable
 
+import numpy as np
+
 from src.css_matrix_completion.css import leverage_select
+from src.css_matrix_completion.mc.nn_completion import NuclearNormMin
 from src.css_matrix_completion.transform import knn, cx, ls
-from src.css_matrix_completion.mc import nn_complete
 
 
 class CSSMC:
 
     def __init__(self, col_number: int, col_select: Callable = leverage_select, transform: Callable = knn,
-                 solve: Callable = nn_complete, threshold: float = 0, fill_method='zero'):
+                 solver: Callable = NuclearNormMin, threshold: float = 0, fill_method='zero', lambda_=0, max_rank=None):
         self.col_number = col_number
         self.col_select = col_select
         self._transform = transform
         self.threshold = threshold
         self.fill_method = fill_method
-        self.solve = solve
+        self.solver = solver
+        self.lambda_ = lambda_
+        self.max_rank = max_rank
+        self.C_incomplete = None
+
+    def get_cols_matrix(self, X, missing_mask):
+        self.cols_indices = self.col_select(X, missing_mask=missing_mask, c=self.col_number)
+        self.C_incomplete = np.copy(X[:, self.cols_indices])
+        self.cols_missing = missing_mask[:, self.cols_indices]
 
     def fit_transform(self, X, X_correct: np.ndarray = None):
         X_tmp = np.copy(X)
         missing_mask = np.isnan(X)
         ok_mask = ~missing_mask
         self.prepare(X_tmp, missing_mask)
-        if X_correct is not None:
-            cols_indices = self.col_select(X_correct, missing_mask=missing_mask, c=self.col_number)
-        else:
-            cols_indices = self.col_select(X_tmp, missing_mask=missing_mask, c=self.col_number)
-        C_incomplete = X_tmp[:, cols_indices]
-        cols_missing = missing_mask[:, cols_indices]
-        C_filled = self.solve(C_incomplete, cols_missing)
-        if X_correct is not None:
-            print(f"kurwa {np.linalg.norm(C_filled-X_correct[:, cols_indices])/np.linalg.norm(X_correct[:, cols_indices])}")
-        X_filled = self.transform(X, C_filled, cols_indices, ok_mask)
+        if self.C_incomplete is None:
+            if X_correct is not None:
+                self.cols_indices = self.col_select(X_correct, missing_mask=missing_mask, c=self.col_number)
+            else:
+                self.cols_indices = self.col_select(X_tmp, missing_mask=missing_mask, c=self.col_number)
+            self.C_incomplete = X_tmp[:, self.cols_indices]
+            self.cols_missing = missing_mask[:, self.cols_indices]
+        C_filled = self.fill_columns(self.C_incomplete, self.cols_missing)
+        # if X_correct is not None:
+        #     print(f"kurwa {np.linalg.norm(C_filled-X_correct[:, cols_indices])/np.linalg.norm(X_correct[:, cols_indices])}")
+        X_filled = self.transform(X, C_filled, self.cols_indices, ok_mask)
         #TODO indeksy kolumn sa do debugowania
-        return X_filled, cols_indices
+        return X_filled
 
-    # def solve(self, C_incomplete, cols_ok):
-    #     C = cp.Variable(C_incomplete.shape)
-    #     prob = cp.Problem(cp.Minimize(cp.norm(C, p='nuc')),
-    #                       [cp.multiply(cols_ok, C) == cp.multiply(cols_ok,C_incomplete)])
-    #
-    #     prob.solve(solver=cp.SCS, verbose=False, use_indirect=True)
-    #     return C.value
+    def fill_columns(self, C_incomplete, cols_missing):
+        if self.lambda_:
+            solver = self.solver(lambda_=self.lambda_, max_rank=self.max_rank)
+        else:
+            solver = self.solver()
+        return solver.fit_transform(C_incomplete, cols_missing)
 
     def transform(self, X_org, C_filled, cols_indices, ok_mask):
         X_filled = np.copy(X_org)
