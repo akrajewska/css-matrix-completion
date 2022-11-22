@@ -56,22 +56,6 @@ def iterative_svd(X, ok_mask, r=10):
     return solver.fit_transform(X, missing_mask)
 
 
-# def ls(X, ok_mask):
-#     diag = ok_mask.T.flatten()
-#     # return np.diag(diag)
-#     A = np.diagflat(diag)
-#     b = np.multiply(ok_mask, X).T.flatten()
-#     b[np.argwhere(np.isnan(b))] = 0
-#     x, *_ = scipy.linalg.lstsq(A, b, lapack_driver='gelsy', check_finite=False)
-#     return x.reshape((X.shape[1], X.shape[0])).T
-
-# def ls_column(Y, ok_mask, ):
-#     si = ok_mask[:, i]
-#     sia = X[si, i]
-#     siX = C[si]
-#     # Y[i, :] = np.linalg.lstsq(siX, sia)[0]
-#     Y[i, :] = scipy.linalg.lstsq(siX, sia, lapack_driver='gelsy', check_finite=False)[0]
-
 @numba.njit
 def ls_vec(siX, sia):
 
@@ -162,6 +146,13 @@ def sgrad_ls(X, ok_mask, C):
 
     return Y, errors
 
+def cx_torch(X, ok_mask, C):
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
+    m, n = X.shape
+    _, k = C.shape
+    Y = torch.zeros((n, k), device=device)
+    _cx(X, ok_mask, C, Y, n)
+    return C@Y.T
 
 def _cx_torch(X, ok_mask, C, Y, n):
     for i in range(n):
@@ -169,4 +160,4 @@ def _cx_torch(X, ok_mask, C, Y, n):
         sia = X[si, i]
         siX = C[si]
        # Y[i, :] = np.linalg.lstsq(siX, sia)[0]
-        Y[i, :] = torch.linalg.lstsq(siX, sia, lapack_driver='gelsy')[0]
+        Y[i, :] = torch.linalg.lstsq(siX, sia, driver='gels')[0]

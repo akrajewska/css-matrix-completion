@@ -23,7 +23,8 @@ importlib-resources = "^5.9.0"
 numba = "^0.56.2"
 dask = "^2022.10.0"
 fbpca = "^1.0"
-fancyimpute = { path = "../../fancyimpute/", develop = true }
+torch = "^1.13.0"
+#fancyimpute = { path = "../../fancyimpute/", develop = true }
 
 [tool.poetry.dev-dependencies]
 
