@@ -23,8 +23,8 @@ class CSSMC:
         self.max_rank = max_rank
         self.C_incomplete = None
 
-    def get_cols_matrix(self, X, missing_mask):
-        self.cols_indices = self.col_select(X, missing_mask=missing_mask, c=self.col_number)
+    def get_cols_matrix(self, X, missing_mask, numlib='numpy'):
+        self.cols_indices = self.col_select(X, missing_mask=missing_mask, c=self.col_number, numlib=numlib)
         self.C_incomplete = self._copy(X[:, self.cols_indices])
         self.cols_missing = missing_mask[:, self.cols_indices]
 
@@ -34,7 +34,7 @@ class CSSMC:
         ok_mask = ~missing_mask
         self._prepare(X_tmp, missing_mask)
         if self.C_incomplete is None:
-            cols_indices = self.col_select(X_tmp, missing_mask=missing_mask, c=self.col_number)
+            cols_indices = self.col_select(X_tmp, missing_mask=missing_mask, c=self.col_number, numlib=self.numlib)
             C_incomplete = X_tmp[:, cols_indices]
             cols_missing = missing_mask[:, cols_indices]
         else:
@@ -80,6 +80,8 @@ class CSSMC:
 
 class CSSMC_N(CSSMC):
 
+    numlib = 'numpy'
+
     def _copy(self, X):
         return np.copy(X)
 
@@ -97,6 +99,7 @@ class CSSMC_N(CSSMC):
             self._fill_columns_with_fn(X, missing_mask, np.nanmin)
 
 class CSSMC_T(CSSMC):
+    numlib = 'torch'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -15,13 +15,13 @@ def max_singular_value(M):
 
 def choose_lambda(M_incomplete, num_lambdas=7, numlib='numpy'):
     lib = np if numlib == 'numpy' else torch
-    M_incomplete = lib.nan_to_num(M_incomplete)
+    M_incomplete_copy = lib.nan_to_num(M_incomplete)
     n_splits = 10
     skf = KFold(n_splits=n_splits, random_state=None, shuffle=True)
     omega = lib.argwhere(~lib.isnan(M_incomplete))
     lambda_min = 1 if numlib == 'numpy' else torch.tensor(1)
     lambda_max = SoftImpute_N._max_singular_value(
-        M_incomplete) if numlib == 'numpy' else SoftImpute_T._max_singular_value(M_incomplete)
+        M_incomplete_copy) if numlib == 'numpy' else SoftImpute_T._max_singular_value(M_incomplete_copy)
     lambda_grid = lib.exp(
         lib.linspace(lib.log(lambda_min),lib.log(lambda_max) - 1,num_lambdas))
     results = []
@@ -38,10 +38,11 @@ def choose_lambda(M_incomplete, num_lambdas=7, numlib='numpy'):
             start_time = time.perf_counter()
             M_filled = si.fit_transform(M_cv, lib.isnan(M_cv), Z_init=M_filled_old)
             print(f'elapsed {time.perf_counter() - start_time}')
-            rmse_lambda += rmse_omega(M_incomplete, M_filled, omega, numlib=numlib)
+            ok_mask = ~lib.isnan(M_incomplete)
+            rmse_lambda += rmse_omega(M_incomplete, M_filled, ok_mask, numlib=numlib)
         M_filled_old = M_filled
         results.append(rmse_lambda / n_splits)
-        print(rmse_lambda / n_splits)
+        print(f'halo {rmse_lambda / n_splits}')
     results = np.array(results) if numlib == "numpy" else torch.tensor(results)
     best_lambda_idx = lib.argmin(results)
     best_lambda = lambda_grid[best_lambda_idx]
@@ -59,7 +60,6 @@ class SoftImpute:
         self.max_rank = max_rank
 
     def shrinkage_operator(self, M, max_rank=None):
-        print(f'start shitnking')
         (U, s, V) = self._svd(M, max_rank)
         s_shrinked = self._shrink(s)
         rank = (s_shrinked > 0).sum()
@@ -68,7 +68,6 @@ class SoftImpute:
         V_shrinked = V[:rank, :]
         S_shrinked = self._diag(s_shrinked)
         M_shrinked = U_shrinked @ (S_shrinked @ V_shrinked)
-        print('shrinked')
         return M_shrinked, rank
 
     def solve(self, X, lambda_, Z_init=None):
@@ -79,7 +78,6 @@ class SoftImpute:
             Z_old = Z_init
         ok_mask = self._ok_mask(X)
         for iter in range(self.max_iter):
-            print('iter')
             Z_old[ok_mask] = X[ok_mask]
             Z_new, rank = self.shrinkage_operator(Z_old)
             if self._converged(Z_new, Z_old):
@@ -183,7 +181,7 @@ class SoftImpute_T(SoftImpute):
         return torch.diag(s)
 
     def _init(self, shape):
-        return torch.zeros(shape, dtype=torch.float64, device=self.device)
+        return torch.zeros(shape, dtype=torch.float32, device=self.device)
 
     def _ok_mask(self, X):
         return ~torch.isnan(X)

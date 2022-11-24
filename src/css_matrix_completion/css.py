@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.decomposition import TruncatedSVD
+import torch
 
 """
 Column subset selection methods
@@ -76,9 +77,11 @@ def deim_select(X, r, missing_mask=None):
     return col_indices
 
 
-def uniform(X, c, missing_mask=None):
-    return np.random.choice(X.shape[1], c, replace=False)
-
+def uniform(X, c, missing_mask=None, numlib='numpy'):
+    if numlib:
+        return np.random.choice(X.shape[1], c, replace=False)
+    else:
+        return torch.randperm(X.shape[1], dtype=torch.int32, device='cuda')[:c]
 
 def freq_select(X, c, random_state=None, missing_mask=None):
     """Chooses column indices from a matrix given its SVD.

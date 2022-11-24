@@ -9,7 +9,7 @@ from src.css_matrix_completion.cssmc import CSSMC, CSSMC_T
 from src.css_matrix_completion.mc.soft_impute import SoftImpute, SoftImpute_T
 from src.css_matrix_completion.mc.soft_impute import choose_lambda
 from src.css_matrix_completion.transform import cx
-from utils.data_generation import create_rank_k_dataset
+from utils.data_generation import create_rank_k_dataset, create_rank_k_tensor
 
 import torch
 
@@ -39,19 +39,16 @@ for trial in range(5):
     for fraction_missing in [0.5, 0.7, 0.9]:
         for rank in [5, 10]:
             print(f'Rank {rank}')
-            M, M_incomplete, omega, mask_array = create_rank_k_dataset(n_rows=n_rows, n_cols=n_cols, k=rank,
+            M, M_incomplete, omega, mask_array = create_rank_k_tensor(n_rows=n_rows, n_cols=n_cols, k=rank,
                                                                        gaussian=True,
                                                                        fraction_missing=fraction_missing)
-            M = torch.tensor(M, dtype=torch.float64, device=device)
-            M_incomplete = torch.tensor(M_incomplete, dtype=torch.float64, device=device)
-            omega = torch.tensor(omega, device=device)
-            mask_tensor = torch.tensor(omega)
+
             base_log_data = [trial, n_rows, n_cols, rank, fraction_missing]
             for c_rate in [0.2, 0.5, 0.7]:
                 n_selected_cols = int(c_rate * n_cols)
                 solver = CSSMC_T(col_number=n_selected_cols, solver=SoftImpute_T, transform=cx, col_select=uniform,
                                  fill_method='zero', max_rank=rank)
-                solver.get_cols_matrix(M_incomplete, torch.isnan(M_incomplete))
+                solver.get_cols_matrix(M_incomplete, torch.isnan(M_incomplete), numlib="torch")
                 best_lambda_, M_filled_old = choose_lambda(solver.C_incomplete, numlib="torch")
                 start_time = time.perf_counter()
                 solver.lambda_ = best_lambda_
