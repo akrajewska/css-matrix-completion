@@ -8,13 +8,13 @@ from src.css_matrix_completion.css import uniform
 from src.css_matrix_completion.cssmc import CSSMC, CSSMC_T
 from src.css_matrix_completion.mc.soft_impute import SoftImpute, SoftImpute_T
 from src.css_matrix_completion.mc.soft_impute import choose_lambda
-from src.css_matrix_completion.transform import cx
+from src.css_matrix_completion.transform import cx, cx_torch
 from utils.data_generation import create_rank_k_dataset, create_rank_k_tensor
 
 import torch
 
-n_rows = 100
-n_cols = 100
+n_rows = 1000
+n_cols = 1000
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
 
@@ -46,7 +46,7 @@ for trial in range(5):
             base_log_data = [trial, n_rows, n_cols, rank, fraction_missing]
             for c_rate in [0.2, 0.5, 0.7]:
                 n_selected_cols = int(c_rate * n_cols)
-                solver = CSSMC_T(col_number=n_selected_cols, solver=SoftImpute_T, transform=cx, col_select=uniform,
+                solver = CSSMC_T(col_number=n_selected_cols, solver=SoftImpute_T, transform=cx_torch, col_select=uniform,
                                  fill_method='zero', max_rank=rank)
                 solver.get_cols_matrix(M_incomplete, torch.isnan(M_incomplete), numlib="torch")
                 best_lambda_, M_filled_old = choose_lambda(solver.C_incomplete, numlib="torch")

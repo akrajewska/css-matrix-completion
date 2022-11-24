@@ -32,9 +32,8 @@ def choose_lambda(M_incomplete, num_lambdas=7, numlib='numpy'):
 
         for train_index, test_index in skf.split(omega, None):
             M_cv = np.copy(M_incomplete) if numlib == 'numpy' else torch.clone(M_incomplete)
-            for idx in omega[test_index]:
-                M_cv[idx[0], idx[1]] = np.nan if numlib == 'numpy' else float('nan')
-            si = SoftImpute_N(lambda_=lambda_) if numlib == 'numpy' else  SoftImpute_T(lambda_=lambda_)
+            M_cv[omega[test_index]] = np.nan if numlib == 'numpy' else float('nan')
+            si = SoftImpute_N(lambda_=lambda_) if numlib == 'numpy' else SoftImpute_T(lambda_=lambda_)
             start_time = time.perf_counter()
             M_filled = si.fit_transform(M_cv, lib.isnan(M_cv), Z_init=M_filled_old)
             print(f'elapsed {time.perf_counter() - start_time}')

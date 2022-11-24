@@ -150,7 +150,7 @@ def cx_torch(X, ok_mask, C):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
     m, n = X.shape
     _, k = C.shape
-    Y = torch.zeros((n, k), device=device)
+    Y = torch.zeros((n, k), dtype=torch.float32, device=device)
     _cx(X, ok_mask, C, Y, n)
     return C@Y.T
 
