@@ -13,10 +13,10 @@ def max_singular_value(M):
     return s[0]
 
 
-def choose_lambda(M_incomplete, num_lambdas=7, numlib='numpy'):
+def choose_lambda(M_incomplete, num_lambdas=25, numlib='numpy'):
     lib = np if numlib == 'numpy' else torch
     M_incomplete_copy = lib.nan_to_num(M_incomplete)
-    n_splits = 10
+    n_splits = 5
     skf = KFold(n_splits=n_splits, random_state=None, shuffle=True)
     omega = lib.argwhere(~lib.isnan(M_incomplete))
     lambda_min = 1 if numlib == 'numpy' else torch.tensor(1)

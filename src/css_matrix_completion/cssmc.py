@@ -6,7 +6,7 @@ import torch
 from css_matrix_completion.mc.soft_impute import SoftImpute
 from src.css_matrix_completion.css import leverage_select
 from src.css_matrix_completion.mc.nn_completion import NuclearNormMin
-from src.css_matrix_completion.transform import knn, cx, ls
+from src.css_matrix_completion.transform import knn, cx, ls, cx_torch
 
 
 class CSSMC:
@@ -59,7 +59,7 @@ class CSSMC:
             X_filled[:, ci] = C_filled[:, i]
         X_filled[ok_mask] = X_org[ok_mask]
         missing_mask = self._missing_mask(X_filled)
-        if self._transform == cx or self._transform == ls:
+        if self._transform in [cx, cx_torch, ls]:
             ok_mask = ~missing_mask
             return self._transform(X_filled, ok_mask, C_filled)
         return self._transform(X_filled, ~missing_mask)

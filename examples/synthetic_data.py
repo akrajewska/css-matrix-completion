@@ -13,7 +13,7 @@ from src.css_matrix_completion.transform import cx, ls
 from src.css_matrix_completion.cssmc import CSSMC
 from src.css_matrix_completion.css import uniform
 
-n_rows = 250
+n_rows = 10
 n_cols = 500
 n_selected_cols = 250
 rank = 5

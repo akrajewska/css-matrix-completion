@@ -151,7 +151,7 @@ def cx_torch(X, ok_mask, C):
     m, n = X.shape
     _, k = C.shape
     Y = torch.zeros((n, k), dtype=torch.float32, device=device)
-    _cx(X, ok_mask, C, Y, n)
+    _cx_torch(X, ok_mask, C, Y, n)
     return C@Y.T
 
 def _cx_torch(X, ok_mask, C, Y, n):
@@ -160,4 +160,5 @@ def _cx_torch(X, ok_mask, C, Y, n):
         sia = X[si, i]
         siX = C[si]
        # Y[i, :] = np.linalg.lstsq(siX, sia)[0]
-        Y[i, :] = torch.linalg.lstsq(siX, sia, driver='gels')[0]
+        #Y[i, :] = torch.linalg.lstsq(siX, sia, driver='gels')[0]
+        Y[i, :] = torch.linalg.pinv(siX)@sia

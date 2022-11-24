@@ -13,8 +13,8 @@ from utils.data_generation import create_rank_k_dataset, create_rank_k_tensor
 
 import torch
 
-n_rows = 1000
-n_cols = 1000
+n_rows = 10
+n_cols = 10
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
 
@@ -58,8 +58,12 @@ for trial in range(5):
                 log_data = base_log_data + [n_selected_cols, elapsed_time] + errors
                 log(log_data)
 
+
+            best_lambda_, M_filled_old = choose_lambda(M_incomplete, numlib="torch")
             start_time = time.perf_counter()
-            # M_filled = nn_complete(M_incomplete)
+            solver = SoftImpute_T(max_rank=rank, lambda_=best_lambda_)
+            solver.fit_transform(M_incomplete, torch.isnan(M_incomplete))
+            elapsed_time = time.perf_counter() - start_time
             errors = get_errors(M_filled, M, ~mask_array)
             log_data = base_log_data + [n_cols, elapsed_time] + errors
             log(log_data)

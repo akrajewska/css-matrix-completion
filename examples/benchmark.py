@@ -12,8 +12,8 @@ from utils.data_generation import create_rank_k_dataset
 
 import numpy as np
 
-n_rows = 500
-n_cols = 500
+n_rows = 10
+n_cols = 10
 
 
 def get_errors(solution, output, missing_mask):
