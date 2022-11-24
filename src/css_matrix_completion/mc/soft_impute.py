@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, KFold
 import torch
 from css_matrix_completion.errors.errors import rmse_omega, rmse
-
+import time
 
 def max_singular_value(M):
     _, s, _ = fbpca.pca(
@@ -35,7 +35,9 @@ def choose_lambda(M_incomplete, num_lambdas=7, numlib='numpy'):
             for idx in omega[test_index]:
                 M_cv[idx[0], idx[1]] = np.nan if numlib == 'numpy' else float('nan')
             si = SoftImpute_N(lambda_=lambda_) if numlib == 'numpy' else  SoftImpute_T(lambda_=lambda_)
+            start_time = time.perf_counter()
             M_filled = si.fit_transform(M_cv, lib.isnan(M_cv), Z_init=M_filled_old)
+            print(f'elapsed {time.perf_counter() - start_time}')
             rmse_lambda += rmse_omega(M_incomplete, M_filled, omega, numlib=numlib)
         M_filled_old = M_filled
         results.append(rmse_lambda / n_splits)
@@ -57,6 +59,7 @@ class SoftImpute:
         self.max_rank = max_rank
 
     def shrinkage_operator(self, M, max_rank=None):
+        print(f'start shitnking')
         (U, s, V) = self._svd(M, max_rank)
         s_shrinked = self._shrink(s)
         rank = (s_shrinked > 0).sum()
@@ -65,15 +68,18 @@ class SoftImpute:
         V_shrinked = V[:rank, :]
         S_shrinked = self._diag(s_shrinked)
         M_shrinked = U_shrinked @ (S_shrinked @ V_shrinked)
+        print('shrinked')
         return M_shrinked, rank
 
     def solve(self, X, lambda_, Z_init=None):
+        start = time.perf_counter()
         if Z_init is None:
             Z_old = self._init(X.shape)
         else:
             Z_old = Z_init
         ok_mask = self._ok_mask(X)
         for iter in range(self.max_iter):
+            print('iter')
             Z_old[ok_mask] = X[ok_mask]
             Z_new, rank = self.shrinkage_operator(Z_old)
             if self._converged(Z_new, Z_old):
@@ -81,6 +87,7 @@ class SoftImpute:
                 break
             Z_old = Z_new
         Z_new[ok_mask] = X[ok_mask]
+        print(f'Solved in {time.perf_counter()-start}')
         return Z_new
 
     def _converged(self, Z_new, Z_old):
@@ -176,7 +183,7 @@ class SoftImpute_T(SoftImpute):
         return torch.diag(s)
 
     def _init(self, shape):
-        return torch.zeros(shape, dtype=torch.float64)
+        return torch.zeros(shape, dtype=torch.float64, device=self.device)
 
     def _ok_mask(self, X):
         return ~torch.isnan(X)

@@ -5,9 +5,9 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cp
 def rmse(X, Y):
     return np.linalg.norm(X-Y)/np.linalg.norm(X)
 
-def rmse_omega(X, Y, omega, numlib = 'numpy'):
-    diff = ((X[i[0], i[1]] - Y[i[0], i[1]])**2 for i in omega)
-    x = ((X[i[0], i[1]])**2 for i in omega)
-    if numlib == 'numpy':
-        return np.sum(diff)/np.sum(x)
-    return torch.sum(torch.tensor(list(diff), dtype=torch.float64, device=device))/torch.sum(torch.tensor(list(x), dtype=torch.float64, device=device))
+def rmse_omega(X, Y, ok_mask, numlib = 'numpy'):
+    lib = np if numlib == 'numpy' else torch
+    return lib.norm(X[ok_mask] - Y[ok_mask])/lib.norm(X[ok_mask])
+
+def rmse_torch(X, Y, ok_mask):
+    return torch.norm(X[ok_mask] - Y[ok_mask])/torch.norm(X[ok_mask])

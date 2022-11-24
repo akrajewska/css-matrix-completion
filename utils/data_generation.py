@@ -2,7 +2,8 @@ from utils.linear_algebra import incoherent_matrix
 import random
 import numpy as np
 import scipy
-
+import torch
+from torch.nn.functional import dropout
 
 def create_rank_k_dataset(
         n_rows=5,
@@ -13,11 +14,12 @@ def create_rank_k_dataset(
         random_seed=0,
         gaussian=False,
         with_replacement=False,
-        noise=0):
+        noise=0,
+        numlib='numpy'):
     # np.random.seed(random_seed)
     if gaussian:
-        x = np.random.randn(n_rows, k)
-        y = np.random.randn(k, n_cols)
+        x = np.random.randn(n_rows, k) if numlib=='numpy' else torch.randn(n_rows, k)
+        y = np.random.randn(k, n_cols) if numlib=='numpy' else torch.randn(k, n_cols)
         if noise:
             x += scipy.sparse.random(n_rows, k, density=noise)
             y += scipy.sparse.random(k, n_cols, density=noise)
@@ -43,6 +45,34 @@ def create_rank_k_dataset(
     mask_array = mask_array.astype(bool)
     missing_mask = ~mask_array
     XY_incomplete[missing_mask] = np.nan
+    return XY, XY_incomplete, omega, mask_array
+
+
+def create_rank_k_tensor(
+        n_rows=5,
+        n_cols=5,
+        k=3,
+        fraction_missing=0.7,
+        symmetric=False,
+        random_seed=0,
+        gaussian=False,
+        with_replacement=False,
+        noise=0):
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
+    x = torch.randn(n_rows, k, dtype=torch.float32, device=device)
+    y = torch.randn(k, n_cols, dtype=torch.float32, device=device)
+    if noise:
+        noise_x = torch.empty(n_rows, k, dtype=torch.float32, device=device)
+        noise_y = torch.empty(k, n_cols, dtype=torch.float32, device=device)
+        torch.nn.init.sparse(noise_x, sparsity=1-noise)
+        torch.nn.init.sparse(noise_y, sparsity=1 - noise)
+        x+=noise_x
+        y+=noise_y
+    XY = x@y
+    XY_incomplete = dropout(XY, p=fraction_missing)
+    omega = torch.nonzero(XY_incomplete)
+    mask_array = XY_incomplete > 0
+    XY_incomplete[mask_array] = float('nan')
     return XY, XY_incomplete, omega, mask_array
 
 

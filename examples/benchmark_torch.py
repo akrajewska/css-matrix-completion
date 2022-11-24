@@ -1,6 +1,7 @@
 import csv
 import time
 import sys
+
 sys.path.append("/home/antonina/DR/css-matrix-completion/")
 
 from src.css_matrix_completion.css import uniform
@@ -16,6 +17,8 @@ n_rows = 100
 n_cols = 100
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
+
+
 def get_errors(solution, output, missing_mask):
     return [
         torch.linalg.norm(solution - output) / torch.linalg.norm(solution),
@@ -42,11 +45,12 @@ for trial in range(5):
             M = torch.tensor(M, dtype=torch.float64, device=device)
             M_incomplete = torch.tensor(M_incomplete, dtype=torch.float64, device=device)
             omega = torch.tensor(omega, device=device)
-
+            mask_tensor = torch.tensor(omega)
             base_log_data = [trial, n_rows, n_cols, rank, fraction_missing]
             for c_rate in [0.2, 0.5, 0.7]:
                 n_selected_cols = int(c_rate * n_cols)
-                solver = CSSMC_T(col_number=n_selected_cols, solver=SoftImpute_T, transform=cx, col_select=uniform, fill_method='zero', max_rank=rank)
+                solver = CSSMC_T(col_number=n_selected_cols, solver=SoftImpute_T, transform=cx, col_select=uniform,
+                                 fill_method='zero', max_rank=rank)
                 solver.get_cols_matrix(M_incomplete, torch.isnan(M_incomplete))
                 best_lambda_, M_filled_old = choose_lambda(solver.C_incomplete, numlib="torch")
                 start_time = time.perf_counter()
@@ -64,4 +68,3 @@ for trial in range(5):
             log(log_data)
 
     print('Finished benchmark')
-
